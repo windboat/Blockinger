@@ -37,26 +37,27 @@ b * Copyright 2013 Simon Willeke
 
 package org.blockinger.game.activities;
 
+import android.content.Intent;
+import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v4.app.FragmentActivity;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.View.OnTouchListener;
+import android.view.Window;
+import android.widget.Button;
+import android.widget.ImageButton;
+
 import org.blockinger.game.BlockBoardView;
+import org.blockinger.game.GameStateSerialHelper;
 import org.blockinger.game.R;
 import org.blockinger.game.WorkThread;
 import org.blockinger.game.components.Controls;
 import org.blockinger.game.components.Display;
 import org.blockinger.game.components.GameState;
 import org.blockinger.game.components.Sound;
-
-
-import android.content.Intent;
-import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.support.v4.app.FragmentActivity;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.view.Window;
-import android.widget.ImageButton;
-import android.widget.Button;
-import android.view.View.OnTouchListener;
 
 
 public class GameActivity extends FragmentActivity {
@@ -96,10 +97,14 @@ public class GameActivity extends FragmentActivity {
 				value = b.getInt("mode");
 				
 			if((value == NEW_GAME)) {
-				game = GameState.getNewInstance(this);
+				game = GameState.getNewInstance(this, null);
 				game.setLevel(b.getInt("level"));
-			} else
+			} else if(!GameState.isFinished()){
 				game = GameState.getInstance(this);
+			} else {
+				GameState.GameStateProxy gameStateProxy = (GameState.GameStateProxy) GameStateSerialHelper.readGameState(this);
+				game = GameState.getNewInstance(this, gameStateProxy);
+			}
 		}
 		game.reconnect(this);
 		dialog = new DefeatDialogFragment();
@@ -320,4 +325,9 @@ public class GameActivity extends FragmentActivity {
 		dialog.show(getSupportFragmentManager(), "hamster");
 	}
 
+	@Override
+	public void finish() {
+		super.finish();
+		GameStateSerialHelper.saveGameState(this, game);
+	}
 }

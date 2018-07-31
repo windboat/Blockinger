@@ -139,4 +139,8 @@ public class Square {
 			c.drawBitmap(bm, x, y, null);
 		}
 	}
+
+	public int getType() {
+		return  type;
+	}
 }

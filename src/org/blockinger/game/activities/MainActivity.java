@@ -37,6 +37,7 @@
 
 package org.blockinger.game.activities;
 
+import org.blockinger.game.GameStateSerialHelper;
 import org.blockinger.game.R;
 import org.blockinger.game.components.GameState;
 import org.blockinger.game.components.Sound;
@@ -53,6 +54,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.support.v4.widget.SimpleCursorAdapter;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -218,8 +220,8 @@ public class MainActivity extends ListActivity {
 
 			@Override
 			public void onProgressChanged(SeekBar arg0, int arg1, boolean arg2) {
-				leveldialogtext.setText("" + arg1);
-				startLevel = arg1;
+                startLevel = arg1 - 1;
+                leveldialogtext.setText("" + startLevel);
 			}
 
 			@Override
@@ -231,7 +233,7 @@ public class MainActivity extends ListActivity {
 			}
 			
 		});
-		leveldialogBar.setProgress(startLevel);
+		leveldialogBar.setProgress(startLevel + 1);
 		leveldialogtext.setText("" + startLevel);
 		startLevelDialog.setView(dialogView);
 		startLevelDialog.show();
@@ -277,8 +279,10 @@ public class MainActivity extends ListActivity {
     	datasource.open();
 	    Cursor cursor = datasource.getCursor();
 	    adapter.changeCursor(cursor);
-	    
-	    if(!GameState.isFinished()) {
+
+		GameState.GameStateProxy gameStateProxy = GameStateSerialHelper.readGameState(this);
+		boolean ret = (gameStateProxy != null && gameStateProxy.isResumable());
+	    if(!GameState.isFinished() || ret) {
 	    	((Button)findViewById(R.id.resumeButton)).setEnabled(true);
 	    	((Button)findViewById(R.id.resumeButton)).setTextColor(getResources().getColor(R.color.square_error));
 	    } else {

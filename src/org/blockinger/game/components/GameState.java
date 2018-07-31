@@ -37,78 +37,92 @@
 
 package org.blockinger.game.components;
 
+import android.R.color;
+import android.preference.PreferenceManager;
+import android.util.Log;
+
+import org.blockinger.game.PieceGenerator;
+import org.blockinger.game.R;
+import org.blockinger.game.Square;
+import org.blockinger.game.activities.GameActivity;
+import org.blockinger.game.pieces.IPiece;
+import org.blockinger.game.pieces.JPiece;
+import org.blockinger.game.pieces.LPiece;
+import org.blockinger.game.pieces.OPiece;
+import org.blockinger.game.pieces.Piece;
+import org.blockinger.game.pieces.SPiece;
+import org.blockinger.game.pieces.TPiece;
+import org.blockinger.game.pieces.ZPiece;
+
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 
-import org.blockinger.game.PieceGenerator;
-import org.blockinger.game.R;
-import org.blockinger.game.activities.GameActivity;
-import org.blockinger.game.pieces.*;
 
-import android.R.color;
-import android.preference.PreferenceManager;
+public class GameState extends Component implements Serializable {
 
+    private static final long serialVersionUID = 201807191943L;
 
-public class GameState extends Component {
+    public final static int state_startable = 0;
+    public final static int state_running = 1;
+    public final static int state_paused = 2;
+    public final static int state_finished = 3;
 
-	public final static int state_startable = 0;
-	public final static int state_running = 1;
-	public final static int state_paused = 2;
-	public final static int state_finished = 3;
-	
-	private static GameState instance;
-	
-	// References
-	private PieceGenerator rng;
-	public Board board;
-	private GregorianCalendar date;
-	private SimpleDateFormat formatter;
-	public int hourOffset;
+    private static GameState instance;
 
-	// Game State
-	private String playerName;
-	private int activeIndex, previewIndex;
-	private Piece[] activePieces;
-	private Piece[] previewPieces;
-	private boolean scheduleSpawn;
-	private long spawnTime;
-	//private boolean paused;
-	//private boolean restartMe;
-	private int stateOfTheGame;
-	private long score;
-	//private long consecutiveBonusScore;
-	private int clearedLines;
-	private int level;
-	private int maxLevel;
-	private long gameTime;     // += (systemtime - currenttime) at start of cycle
-	private long currentTime;  // = systemtime at start of cycle
-	private long nextDropTime;
-	private long nextPlayerDropTime;
-	private long nextPlayerMoveTime;
-	private int[] dropIntervals; // =(1/gamespeed)
-	private long playerDropInterval;
-	private long playerMoveInterval;
-	private int singleLineScore;
-	private int doubleLineScore;
-	private int trippleLineScore;
-	private int multiTetrisScore;
-	private boolean multitetris;
-	private int quadLineScore;
-	private int hardDropBonus;
-	private int softDropBonus;
-	private int spawn_delay;
-	private int piece_start_x;
-	private long actions;
-	private int songtime;
+    // References
+    private transient PieceGenerator rng;
+    public transient Board board;
+    private transient GregorianCalendar date;
+    private transient SimpleDateFormat formatter;
+    public int hourOffset;
 
-	private long popupTime;
-	private String popupString;
-	private int popupAttack;
-	private int popupSustain;
-	private int popupDecay;
-	private int softDropDistance;
-	
+    // Game State
+    private String playerName;
+    private int activeIndex, previewIndex;
+    private transient Piece[] activePieces;
+    private transient Piece[] previewPieces;
+    private boolean scheduleSpawn;
+    private long spawnTime;
+    //private boolean paused;
+    //private boolean restartMe;
+    private int stateOfTheGame;
+    private long score;
+    //private long consecutiveBonusScore;
+    private int clearedLines;
+    private int level;
+    private int maxLevel;
+    private long gameTime;     // += (systemtime - currenttime) at start of cycle
+    private long currentTime;  // = systemtime at start of cycle
+    private long nextDropTime;
+    private long nextPlayerDropTime;
+    private long nextPlayerMoveTime;
+    private int[] dropIntervals; // =(1/gamespeed)
+    private long playerDropInterval;
+    private long playerMoveInterval;
+    private int singleLineScore;
+    private int doubleLineScore;
+    private int trippleLineScore;
+    private int multiTetrisScore;
+    private boolean multitetris;
+    private int quadLineScore;
+    private int hardDropBonus;
+    private int softDropBonus;
+    private int spawn_delay;
+    private int piece_start_x;
+    private long actions;
+    private int songtime;
+
+    private long popupTime;
+    private String popupString;
+    private int popupAttack;
+    private int popupSustain;
+    private int popupDecay;
+    private int softDropDistance;
+
+    private boolean infinity = false;
+
 	private GameState(GameActivity ga) {
 		super(ga);
 		actions = 0;
@@ -191,13 +205,108 @@ public class GameState extends Component {
 		spawnTime = 0;
 	}
 
-	public void setPlayerName(String string) {
-		playerName = string;
-	}
-	
-	public Board getBoard() {
-		return board;
-	}
+    private GameState(GameActivity ga, GameStateProxy gameStateProxy) {
+        super(ga);
+        actions = gameStateProxy.actions;
+        board = new Board(host);
+        int width = board.getWidth();
+        int height = board.getHeight();
+        for(int i = 0; i < height; i++){
+            for(int j = 0; j < width; j++){
+                int type = gameStateProxy.board[i][j];
+                if(type == -1)
+                    continue;
+
+                board.set(i,j, new Square(type, ga));
+            }
+        }
+
+
+        date = new GregorianCalendar();
+        formatter = new SimpleDateFormat("HH:mm:ss",Locale.US);
+        date.setTimeInMillis(60000);
+        if(formatter.format(date.getTime()).startsWith("23"))
+            hourOffset = 1;
+        else if(formatter.format(date.getTime()).startsWith("01"))
+            hourOffset = -1;
+        else
+            hourOffset = 0;
+
+        dropIntervals = gameStateProxy.dropIntervals;
+        singleLineScore = gameStateProxy.singleLineScore;
+        doubleLineScore = gameStateProxy.doubleLineScore;
+        trippleLineScore = gameStateProxy.trippleLineScore;
+        multiTetrisScore = gameStateProxy.multiTetrisScore;
+        quadLineScore = gameStateProxy.quadLineScore;
+        hardDropBonus = gameStateProxy.hardDropBonus;
+        softDropBonus = gameStateProxy.softDropBonus;
+        softDropDistance = gameStateProxy.softDropDistance;
+        spawn_delay = gameStateProxy.spawn_delay;
+        piece_start_x = gameStateProxy.piece_start_x;
+        popupAttack = gameStateProxy.popupAttack;
+        popupSustain = gameStateProxy.popupSustain;
+        popupDecay = gameStateProxy.popupDecay;
+        popupString = gameStateProxy.popupString;
+        popupTime = gameStateProxy.popupTime;
+        clearedLines = gameStateProxy.clearedLines;
+        level = gameStateProxy.level;
+        score = gameStateProxy.score;
+        songtime = gameStateProxy.songtime;
+        maxLevel = gameStateProxy.maxLevel;
+
+        nextDropTime = gameStateProxy.nextDropTime;
+
+        playerDropInterval = gameStateProxy.playerDropInterval;
+        playerMoveInterval = gameStateProxy.playerMoveInterval;
+        nextPlayerDropTime = gameStateProxy.nextPlayerDropTime;
+        nextPlayerMoveTime = gameStateProxy.nextPlayerMoveTime;
+
+        gameTime = gameStateProxy.gameTime;
+        if (PreferenceManager.getDefaultSharedPreferences(host).getString("pref_rng", "sevenbag").equals("sevenbag") ||
+                PreferenceManager.getDefaultSharedPreferences(host).getString("pref_rng", "7-Bag-Randomization (default)").equals("7-Bag-Randomization (default)"))
+            rng = new PieceGenerator(PieceGenerator.STRAT_7BAG);
+        else
+            rng = new PieceGenerator(PieceGenerator.STRAT_RANDOM);
+
+        // Initialize Pieces
+        activePieces = new Piece[7];
+        previewPieces = new Piece[7];
+
+        activePieces[0] = new IPiece(host);
+        activePieces[1] = new JPiece(host);
+        activePieces[2] = new LPiece(host);
+        activePieces[3] = new OPiece(host);
+        activePieces[4] = new SPiece(host);
+        activePieces[5] = new TPiece(host);
+        activePieces[6] = new ZPiece(host);
+
+        previewPieces[0] = new IPiece(host);
+        previewPieces[1] = new JPiece(host);
+        previewPieces[2] = new LPiece(host);
+        previewPieces[3] = new OPiece(host);
+        previewPieces[4] = new SPiece(host);
+        previewPieces[5] = new TPiece(host);
+        previewPieces[6] = new ZPiece(host);
+
+        // starting pieces
+        activeIndex = gameStateProxy.activeIndex;
+        previewIndex = gameStateProxy.previewIndex;
+        activePieces[activeIndex].setActive(true);
+
+        //paused = true;
+        //restartMe = false;
+        stateOfTheGame = gameStateProxy.stateOfTheGame;
+        scheduleSpawn = gameStateProxy.scheduleSpawn;
+        spawnTime = gameStateProxy.spawnTime;
+    }
+
+    public void setPlayerName(String string) {
+        playerName = string;
+    }
+
+    public Board getBoard() {
+        return board;
+    }
 
 	public String getPlayerName() {
 		return playerName;
@@ -365,9 +474,9 @@ public class GameState extends Component {
 		return true;
 	}
 
-	public String getLevelString() {
-		return "" + level;
-	}
+    public String getLevelString() {
+        return infinity ? "-1" : "" + level;
+    }
 
 	public String getTimeString() {
 		date.setTimeInMillis(gameTime + hourOffset*(3600000));
@@ -411,9 +520,10 @@ public class GameState extends Component {
 		return gameTime;
 	}
 
-	public void nextLevel() {
-		level++;
-	}
+    public void nextLevel() {
+        if (!infinity)
+            level++;
+    }
 
 	public int getLevel() {
 		return level;
@@ -467,10 +577,15 @@ public class GameState extends Component {
 		return instance;
 	}
 
-	public static GameState getNewInstance(GameActivity ga) {
-		instance = new GameState(ga);
-		return instance;
-	}
+    public static GameState getNewInstance(GameActivity ga, GameStateProxy gameStateProxy) {
+        if(gameStateProxy == null){
+            instance = new GameState(ga);
+        } else  {
+            instance = new GameState(ga, gameStateProxy);
+        }
+
+        return instance;
+    }
 
 	public static boolean hasInstance() {
 		return (instance != null);
@@ -498,11 +613,16 @@ public class GameState extends Component {
 		this.songtime = songtime;
 	}
 
-	public void setLevel(int int1) {
-		level = int1;
-		nextDropTime = host.getResources().getIntArray(R.array.intervals)[int1];
-		clearedLines = 10*int1;
-	}
+    public void setLevel(int int1) {
+        if (int1 < 0) {
+            infinity = true;
+            int1 = 0;
+        }
+
+        level = int1;
+        nextDropTime = host.getResources().getIntArray(R.array.intervals)[int1];
+        clearedLines = 10 * int1;
+    }
 
 	public String getPopupString() {
 		return popupString;
@@ -538,8 +658,120 @@ public class GameState extends Component {
 		return host.getResources().getColor(color.white);
 	}
 
-	public void incSoftDropCounter() {
-		softDropDistance++;
-	}
-	
+    public void incSoftDropCounter() {
+        softDropDistance++;
+    }
+
+    private Object writeReplace () {
+//        Log.i("GameState","writeReplace()");
+        return new GameStateProxy(this);
+    }
+
+
+    public static class GameStateProxy implements Serializable {
+        private static final long serialVersionUID = 201807301756L;
+
+        // References
+        public  int[][] board;
+        public int hourOffset;
+
+        // Game State
+        private String playerName;
+        private int activeIndex, previewIndex;
+        private boolean scheduleSpawn;
+        private long spawnTime;
+        private int stateOfTheGame;
+        private long score;
+        private int clearedLines;
+        private int level;
+        private int maxLevel;
+        private long gameTime;     // += (systemtime - currenttime) at start of cycle
+        private long currentTime;  // = systemtime at start of cycle
+        private long nextDropTime;
+        private long nextPlayerDropTime;
+        private long nextPlayerMoveTime;
+        private int[] dropIntervals; // =(1/gamespeed)
+        private long playerDropInterval;
+        private long playerMoveInterval;
+        private int singleLineScore;
+        private int doubleLineScore;
+        private int trippleLineScore;
+        private int multiTetrisScore;
+        private boolean multitetris;
+        private int quadLineScore;
+        private int hardDropBonus;
+        private int softDropBonus;
+        private int spawn_delay;
+        private int piece_start_x;
+        private long actions;
+        private int songtime;
+
+        private long popupTime;
+        private String popupString;
+        private int popupAttack;
+        private int popupSustain;
+        private int popupDecay;
+        private int softDropDistance;
+
+        private boolean infinity = false;
+
+        public GameStateProxy(GameState gameState) {
+            int width = gameState.board.getWidth();
+            int height = gameState.board.getHeight();
+            board = new int[height][width];
+            for(int i = 0; i < height; i++){
+                for(int j = 0; j < width; j++){
+                    Square square = gameState.board.get(i,j);
+                    board[i][j] = square == null? -1 : square.getType();
+                }
+            }
+
+            this.hourOffset = gameState.hourOffset;
+            this.playerName = gameState.playerName;
+            this.activeIndex = gameState.activeIndex;
+            this.previewIndex = gameState.previewIndex;
+            this.scheduleSpawn = gameState.scheduleSpawn;
+            this.stateOfTheGame = gameState.stateOfTheGame;
+            this.score = gameState.score;
+            this.clearedLines = gameState.clearedLines;
+            this.level = gameState.level;
+            this.maxLevel = gameState.maxLevel;
+            this.gameTime = gameState.gameTime;
+            this.currentTime = gameState.currentTime;
+            this.nextDropTime = gameState.nextDropTime;
+            this.nextPlayerDropTime = gameState.nextPlayerDropTime;
+            this.nextPlayerMoveTime = gameState.nextPlayerMoveTime;
+            this.dropIntervals = gameState.dropIntervals;
+            this.playerDropInterval = gameState.playerDropInterval;
+            this.playerMoveInterval = gameState.playerMoveInterval;
+            this.singleLineScore = gameState.singleLineScore;
+            this.doubleLineScore = gameState.doubleLineScore;
+            this.trippleLineScore = gameState.trippleLineScore;
+            this.multiTetrisScore = gameState.multiTetrisScore;
+            this.multitetris = gameState.multitetris;
+            this.quadLineScore = gameState.quadLineScore;
+            this.hardDropBonus = gameState.hardDropBonus;
+            this.softDropBonus = gameState.softDropBonus;
+            this.spawn_delay = gameState.spawn_delay;
+            this.piece_start_x = gameState.piece_start_x;
+            this.actions = gameState.actions;
+            this.songtime = gameState.songtime;
+
+            this.popupTime = gameState.popupTime;
+            this.popupString = gameState.popupString;
+            this.popupAttack = gameState.popupAttack;
+            this.popupSustain = gameState.popupSustain;
+            this.popupDecay = gameState.popupDecay;
+            this.softDropDistance = gameState.softDropDistance;
+            this.infinity  = gameState.infinity;
+
+        }
+
+        public boolean isResumable() {
+            return (stateOfTheGame != state_finished);
+        }
+    }
+
+
+
 }
