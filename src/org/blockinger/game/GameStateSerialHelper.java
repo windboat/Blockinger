@@ -12,6 +12,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 public class GameStateSerialHelper {
+    private static final boolean DEBUG = false;
 
     private static String filename = "gameStateProxy.obj";
 
@@ -46,6 +47,7 @@ public class GameStateSerialHelper {
 
     public static synchronized GameState.GameStateProxy readGameState(Context context) {
         if (gameStateProxy != null) {
+            if(DEBUG) Log.i("GameStateSerialHelper", "readGameState() return obj: " + gameStateProxy);
             return gameStateProxy;
         }
         ObjectInputStream in = null;
@@ -62,7 +64,7 @@ public class GameStateSerialHelper {
                 }
             }
         }
-//        Log.i("GameStateSerialHelper", "readGameState() obj: " + gameStateProxy);
+        if(DEBUG) Log.i("GameStateSerialHelper", "readGameState() read obj: " + gameStateProxy);
         return gameStateProxy;
     }
 

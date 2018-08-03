@@ -99,6 +99,13 @@ public class GameActivity extends FragmentActivity {
 			if((value == NEW_GAME)) {
 				game = GameState.getNewInstance(this, null);
 				game.setLevel(b.getInt("level"));
+				if(b!=null){
+					value = b.getInt("mode");
+					if(b.getString("playername") != null)
+						game.setPlayerName(b.getString("playername"));
+				} else
+					game.setPlayerName(getResources().getString(R.string.anonymous));
+
 			} else if(!GameState.isFinished()){
 				game = GameState.getInstance(this);
 			} else {
@@ -116,12 +123,7 @@ public class GameActivity extends FragmentActivity {
 		if(game.isResumable())
 			sound.startMusic(Sound.GAME_MUSIC, game.getSongtime());
 		sound.loadEffects();
-		if(b!=null){
-			value = b.getInt("mode");
-			if(b.getString("playername") != null)
-				game.setPlayerName(b.getString("playername"));
-		} else 
-			game.setPlayerName(getResources().getString(R.string.anonymous));
+
 		dialog.setCancelable(false);
 		if(!game.isResumable())
 			gameOver(game.getScore(), game.getTimeString(), game.getAPM());

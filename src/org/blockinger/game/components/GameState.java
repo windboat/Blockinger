@@ -214,10 +214,10 @@ public class GameState extends Component implements Serializable {
         for(int i = 0; i < height; i++){
             for(int j = 0; j < width; j++){
                 int type = gameStateProxy.board[i][j];
-                if(type == -1)
+                if(type == -1 || type == 0)
                     continue;
 
-                board.set(i,j, new Square(type, ga));
+                board.set(j,i, new Square(type, ga));
             }
         }
 
@@ -298,6 +298,11 @@ public class GameState extends Component implements Serializable {
         stateOfTheGame = gameStateProxy.stateOfTheGame;
         scheduleSpawn = gameStateProxy.scheduleSpawn;
         spawnTime = gameStateProxy.spawnTime;
+
+        playerName = gameStateProxy.playerName;
+        infinity = gameStateProxy.infinity;
+        multitetris = gameStateProxy.multitetris;
+        currentTime = gameStateProxy.currentTime;
     }
 
     public void setPlayerName(String string) {
@@ -713,7 +718,7 @@ public class GameState extends Component implements Serializable {
         private int popupDecay;
         private int softDropDistance;
 
-        private boolean infinity = false;
+        private boolean infinity;
 
         public GameStateProxy(GameState gameState) {
             int width = gameState.board.getWidth();
@@ -721,7 +726,7 @@ public class GameState extends Component implements Serializable {
             board = new int[height][width];
             for(int i = 0; i < height; i++){
                 for(int j = 0; j < width; j++){
-                    Square square = gameState.board.get(i,j);
+                    Square square = gameState.board.get(j,i);
                     board[i][j] = square == null? -1 : square.getType();
                 }
             }
@@ -731,6 +736,7 @@ public class GameState extends Component implements Serializable {
             this.activeIndex = gameState.activeIndex;
             this.previewIndex = gameState.previewIndex;
             this.scheduleSpawn = gameState.scheduleSpawn;
+            this.spawnTime = gameState.spawnTime;
             this.stateOfTheGame = gameState.stateOfTheGame;
             this.score = gameState.score;
             this.clearedLines = gameState.clearedLines;
